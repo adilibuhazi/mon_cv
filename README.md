@@ -17,13 +17,13 @@ samples, guidance on mobile development, and a full API reference.
 # Mon CV Flutter
 
 ## Page de connexion
-![Connexion](screenshots/connexion.png)
+![connexion](screenshots/connexion.png)
 
 ## Page CV
-![CV](screenshots/cv.png)
+![cv](screenshots/cv.png)
 
 ## Page Famille
-![Famille](screenshots/famille.png)
+![famille](screenshots/famille.png)
 
 ## Page Contact
-![Contact](screenshots/contact.png)
+![contact](screenshots/contact.png)
