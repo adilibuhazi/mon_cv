@@ -27,3 +27,6 @@ samples, guidance on mobile development, and a full API reference.
 
 ## Page Contact
 ![contact](contact.png)
+## Démonstration vidéo
+
+[Regarder la vidéo de présentation de mon application](./video.mp4)
