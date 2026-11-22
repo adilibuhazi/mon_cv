@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'services/api_service.dart';
 
 void main() {
   runApp(const MonCvApp());
@@ -30,7 +32,8 @@ class MonCvApp extends StatelessWidget {
   }
 }
 
-// ================= PAGE CONNEXION =================
+// ================= CONNEXION =================
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -39,13 +42,70 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final identifiantController = TextEditingController();
+  final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  bool cacherMotDePasse = true;
 
-  void connecter() {
-    if (identifiantController.text.trim() == 'adili' &&
-        passwordController.text == '1234') {
+  bool cacherMotDePasse = true;
+  bool chargement = false;
+
+  // CREER UN COMPTE
+  Future<void> creerCompte() async {
+    if (emailController.text.trim().isEmpty ||
+        passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Remplissez tous les champs'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => chargement = true);
+
+    final resultat = await ApiService.inscrire(
+      emailController.text.trim(),
+      passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    setState(() => chargement = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          resultat
+              ? 'Compte créé avec succès ! Connectez-vous.'
+              : 'Échec de création du compte. Vérifiez les informations.',
+        ),
+      ),
+    );
+  }
+
+  // SE CONNECTER
+  Future<void> connecter() async {
+    if (emailController.text.trim().isEmpty ||
+        passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Remplissez tous les champs'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => chargement = true);
+
+    final resultat = await ApiService.seConnecter(
+      emailController.text.trim(),
+      passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    setState(() => chargement = false);
+
+    if (resultat) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -55,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Identifiant ou mot de passe incorrect !'),
+          content: Text('Email ou mot de passe incorrect !'),
           backgroundColor: Colors.red,
         ),
       );
@@ -64,7 +124,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    identifiantController.dispose();
+    emailController.dispose();
     passwordController.dispose();
     super.dispose();
   }
@@ -102,20 +162,27 @@ class _LoginPageState extends State<LoginPage> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 35),
+
+              // CHAMP EMAIL
               TextField(
-                controller: identifiantController,
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  labelText: 'Identifiant',
-                  prefixIcon: const Icon(Icons.person),
+                  labelText: 'Adresse e-mail',
+                  prefixIcon: const Icon(Icons.email),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
                 ),
               ),
+
               const SizedBox(height: 20),
+
+              // CHAMP MOT DE PASSE
               TextField(
                 controller: passwordController,
                 obscureText: cacherMotDePasse,
+                onSubmitted: (_) => connecter(),
                 decoration: InputDecoration(
                   labelText: 'Mot de passe',
                   prefixIcon: const Icon(Icons.lock),
@@ -135,14 +202,16 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(15),
                   ),
                 ),
-                onSubmitted: (_) => connecter(),
               ),
+
               const SizedBox(height: 30),
+
+              // BOUTON CONNEXION
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: connecter,
+                  onPressed: chargement ? null : connecter,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: bleu,
                     foregroundColor: Colors.white,
@@ -150,20 +219,30 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  child: const Text(
-                    'Se connecter',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: chargement
+                      ? const CircularProgressIndicator(
+                          color: Colors.white,
+                        )
+                      : const Text(
+                          'Se connecter',
+                          style: TextStyle(fontSize: 17),
+                        ),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Mon CV personnel',
-                style: TextStyle(color: Colors.grey),
+
+              const SizedBox(height: 10),
+
+              // BOUTON CREATION DE COMPTE
+              TextButton(
+                onPressed: chargement ? null : creerCompte,
+                child: const Text(
+                  'Créer un compte',
+                  style: TextStyle(fontSize: 16),
+                ),
               ),
+
+              const SizedBox(height: 20),
+              const Text('Mon CV personnel'),
             ],
           ),
         ),
@@ -172,7 +251,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// ================= NAVIGATION PRINCIPALE =================
+// ================= NAVIGATION =================
+
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
@@ -183,13 +263,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int index = 0;
 
-  final List<Widget> pages = const [
-    CvPage(),
-    FamilyPage(),
-    ContactPage(),
-  ];
-
-  final List<String> titles = [
+  final List<String> titres = [
     'Mon CV',
     'Ma famille',
     'Mes contacts',
@@ -197,17 +271,19 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      const CvPage(),
+      const FamilyPage(),
+      const ContactPage(),
+    ];
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(titles[index]),
-      ),
+      appBar: AppBar(title: Text(titres[index])),
       body: pages[index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (nouvelIndex) {
-          setState(() {
-            index = nouvelIndex;
-          });
+          setState(() => index = nouvelIndex);
         },
         destinations: const [
           NavigationDestination(
@@ -230,6 +306,7 @@ class _MainPageState extends State<MainPage> {
 }
 
 // ================= PAGE CV =================
+
 class CvPage extends StatelessWidget {
   const CvPage({super.key});
 
@@ -242,13 +319,14 @@ class CvPage extends StatelessWidget {
         children: [
           Center(
             child: Column(
-              children: const [
-                CircleAvatar(
+              children: [
+                const CircleAvatar(
                   radius: 65,
-                  backgroundImage: AssetImage('assets/images/adili.jpg'),
+                  backgroundImage:
+                      AssetImage('assets/images/adili.jpg'),
                 ),
-                SizedBox(height: 15),
-                Text(
+                const SizedBox(height: 15),
+                const Text(
                   'ADILI BUHAZI DIVINE',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -257,14 +335,8 @@ class CvPage extends StatelessWidget {
                     color: bleu,
                   ),
                 ),
-                SizedBox(height: 5),
-                Text(
-                  'Étudiante en informatique',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                ),
+                const SizedBox(height: 5),
+                const Text('Étudiante en informatique'),
               ],
             ),
           ),
@@ -306,8 +378,7 @@ class CvPage extends StatelessWidget {
           ),
           const InfoCard(
             title: 'Langues',
-            description: 'Français : bien\n'
-                'Autres langues : swahili, anglais',
+            description: 'Français : bien\nAutres langues : swahili, anglais',
           ),
           const SectionTitle(
             icon: Icons.favorite,
@@ -320,10 +391,7 @@ class CvPage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           const Center(
-            child: Text(
-              '© 2026 - Adili Buhazi Divine',
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: Text('© 2026 - Adili Buhazi Divine'),
           ),
         ],
       ),
@@ -332,102 +400,288 @@ class CvPage extends StatelessWidget {
 }
 
 // ================= PAGE FAMILLE =================
-class FamilyPage extends StatelessWidget {
+
+class FamilyPage extends StatefulWidget {
   const FamilyPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final membres = [
-      {
-        'nom': 'Mburano Buhazi',
-        'lien': 'Père',
-        'profession': 'Juge',
-        'initiales': 'MB',
-      },
-      {
-        'nom': 'Rose Nyirabageni',
-        'lien': 'Mère',
-        'profession': 'Fermière',
-        'initiales': 'RN',
-      },
-    ];
+  State<FamilyPage> createState() => _FamilyPageState();
+}
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Ma famille',
-            style: TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-              color: bleu,
+class _FamilyPageState extends State<FamilyPage> {
+  List<dynamic> membres = [];
+  bool chargement = true;
+
+  @override
+  void initState() {
+    super.initState();
+    chargerMembres();
+  }
+
+  Future<void> chargerMembres() async {
+    setState(() => chargement = true);
+
+    try {
+      membres = await ApiService.getFamilyMembers();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur de chargement des membres'),
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => chargement = false);
+    }
+  }
+
+  Future<void> afficherFormulaire({
+    Map<String, dynamic>? membre,
+  }) async {
+    final nom = TextEditingController(
+      text: membre?['nom'] ?? '',
+    );
+    final postnom = TextEditingController(
+      text: membre?['postnom'] ?? '',
+    );
+    final prenom = TextEditingController(
+      text: membre?['prenom'] ?? '',
+    );
+    final lieu = TextEditingController(
+      text: membre?['lieu_naissance'] ?? '',
+    );
+    final date = TextEditingController(
+      text: membre?['date_naissance'] ?? '',
+    );
+    final parente = TextEditingController(
+      text: membre?['parente'] ?? '',
+    );
+
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            membre == null
+                ? 'Ajouter un membre'
+                : 'Modifier un membre',
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  champ(nom, 'Nom'),
+                  champ(postnom, 'Postnom'),
+                  champ(prenom, 'Prénom'),
+                  champ(lieu, 'Lieu de naissance'),
+                  champ(date, 'Date de naissance (AAAA-MM-JJ)'),
+                  champ(parente, 'Lien de parenté'),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Voici quelques membres de ma famille.',
-            style: TextStyle(color: Colors.grey),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+
+                final donnees = {
+                  'nom': nom.text.trim(),
+                  'postnom': postnom.text.trim(),
+                  'prenom': prenom.text.trim(),
+                  'lieu_naissance': lieu.text.trim(),
+                  'date_naissance': date.text.trim(),
+                  'parente': parente.text.trim(),
+                };
+
+                try {
+                  if (membre == null) {
+                    await ApiService.ajouterMembre(donnees);
+                  } else {
+                    await ApiService.modifierMembre(
+                      int.parse(membre['id'].toString()),
+                      donnees,
+                    );
+                  }
+
+                  if (!dialogContext.mounted) return;
+
+                  Navigator.pop(dialogContext);
+                  await chargerMembres();
+                } catch (e) {
+                  if (!dialogContext.mounted) return;
+
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text('Erreur : $e')),
+                  );
+                }
+              },
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        );
+      },
+    );
+
+    nom.dispose();
+    postnom.dispose();
+    prenom.dispose();
+    lieu.dispose();
+    date.dispose();
+    parente.dispose();
+  }
+
+  Future<void> supprimerMembre(dynamic id) async {
+    final confirmation = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer'),
+        content: const Text(
+          'Voulez-vous supprimer ce membre ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
           ),
-          const SizedBox(height: 20),
-          ...membres.map((membre) {
-            final estPere = membre['lien'] == 'Père';
-            return Card(
-              elevation: 3,
-              margin: const EdgeInsets.only(bottom: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundImage: AssetImage(
-                        estPere
-                            ? 'assets/images/papa.jpg'
-                            : 'assets/images/maman.jpg',
-                      ),
-                    ),
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            membre['nom']!,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text('Lien : ${membre['lien']}'),
-                          Text(
-                            'Profession : ${membre['profession']}',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-          const SizedBox(height: 15),
-          const Text(
-            'D’autres membres pourront être ajoutés.',
-            style: TextStyle(color: Colors.grey),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Supprimer'),
           ),
         ],
+      ),
+    );
+
+    if (confirmation == true) {
+      try {
+        await ApiService.supprimerMembre(
+          int.parse(id.toString()),
+        );
+        await chargerMembres();
+      } catch (e) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e')),
+        );
+      }
+    }
+  }
+
+  Widget champ(
+    TextEditingController controller,
+    String label,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return 'Ce champ est obligatoire';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: chargement
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : membres.isEmpty
+              ? const Center(
+                  child: Text('Aucun membre enregistré'),
+                )
+              : RefreshIndicator(
+                  onRefresh: chargerMembres,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: membres.length,
+                    itemBuilder: (context, index) {
+                      final membre = membres[index];
+                      final imageUrl = membre['image_url'];
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 15),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: imageUrl != null &&
+                                    imageUrl.toString().isNotEmpty
+                                ? NetworkImage(imageUrl.toString())
+                                : null,
+                            child: imageUrl == null
+                                ? const Icon(Icons.person)
+                                : null,
+                          ),
+                          title: Text(
+                            '${membre['nom'] ?? ''} '
+                            '${membre['postnom'] ?? ''} '
+                            '${membre['prenom'] ?? ''}',
+                          ),
+                          subtitle: Text(
+                            'Lien : ${membre['parente'] ?? ''}\n'
+                            'Naissance : ${membre['date_naissance'] ?? ''}',
+                          ),
+                          isThreeLine: true,
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (choix) {
+                              if (choix == 'modifier') {
+                                afficherFormulaire(
+                                  membre:
+                                      Map<String, dynamic>.from(membre),
+                                );
+                              } else if (choix == 'supprimer') {
+                                supprimerMembre(membre['id']);
+                              }
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(
+                                value: 'modifier',
+                                child: Text('Modifier'),
+                              ),
+                              PopupMenuItem(
+                                value: 'supprimer',
+                                child: Text('Supprimer'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: bleu,
+        foregroundColor: Colors.white,
+        onPressed: () => afficherFormulaire(),
+        child: const Icon(Icons.add),
       ),
     );
   }
 }
 
 // ================= PAGE CONTACT =================
+
 class ContactPage extends StatelessWidget {
   const ContactPage({super.key});
 
@@ -499,7 +753,8 @@ class ContactPage extends StatelessWidget {
   }
 }
 
-// ================= WIDGETS REUTILISABLES =================
+// ================= WIDGETS =================
+
 class SectionTitle extends StatelessWidget {
   final IconData icon;
   final String title;
