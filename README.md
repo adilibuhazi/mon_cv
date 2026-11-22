@@ -27,11 +27,5 @@ samples, guidance on mobile development, and a full API reference.
 
 ## Page Contact
 ![contact](contact.png)
-## Démonstration vidéo
+[▶️ Télécharger et regarder la vidéo de démonstration](https://github.com/adilibuhazi/mon_cv/raw/refs/heads/master/video.mp4)
 
-[Regarder la vidéo de présentation de mon application](./video.mp4)
-## 🎥 Démonstration de l'application
-
-Pour visionner la démonstration de mon application Mon CV, cliquez sur le lien ci-dessous :
-
-[▶️ Regarder la vidéo de démonstration](./video.mp4)
